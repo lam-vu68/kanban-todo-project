@@ -1,60 +1,63 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import users, boards, tasks
 
-# Tạo FastAPI app instance
+from app.routers import auth, users, boards, tasks  # Thêm auth router
+from app.database import create_tables
+from app.core.config import settings
+
+# Tạo tables khi khởi động (development only)
+create_tables()
+
+# Tạo FastAPI app
 app = FastAPI(
-    title="Kanban TODO API",
+    title=settings.app_name,
     version="1.0.0",
-    description="API để quản lý công việc theo mô hình Kanban board",
+    description="Kanban TODO API với JWT Authentication",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# Thêm CORS middleware để frontend có thể gọi API
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Trong production nên chỉ định cụ thể domain
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
 )
 
-# Include các routers
+# Include routers
+app.include_router(auth.router)  # Authentication routes
 app.include_router(users.router)
 app.include_router(boards.router)
 app.include_router(tasks.router)
 
-# Root endpoint
 @app.get("/")
 def read_root():
-    """Welcome endpoint"""
     return {
-        "message": "Chào mừng đến với Kanban TODO API!",
+        "message": f"Chào mừng đến với {settings.app_name}!",
         "version": "1.0.0",
+        "features": [
+            "JWT Authentication",
+            "Role-based Authorization", 
+            "Secure Password Hashing",
+            "Protected API Endpoints"
+        ],
         "docs_url": "/docs",
-        "redoc_url": "/redoc",
-        "endpoints": {
-            "users": "/users",
-            "boards": "/boards", 
-            "tasks": "/tasks"
+        "auth_endpoints": {
+            "register": "/auth/register",
+            "login": "/auth/login",
+            "refresh": "/auth/refresh"
         }
     }
 
-# Health check endpoint
 @app.get("/health")
 def health_check():
-    """Kiểm tra API có hoạt động không"""
     return {
         "status": "healthy",
-        "service": "Kanban TODO API",
-        "version": "1.0.0"
+        "service": settings.app_name,
+        "authentication": "enabled",
+        "database": "connected"
     }
 
-if __name__ == "__main__":
-    import uvicorn
-    # The FastAPI application object is defined in this module (main.py),
-    # so point uvicorn to "main:app" when running from the package root.
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-
-
+    

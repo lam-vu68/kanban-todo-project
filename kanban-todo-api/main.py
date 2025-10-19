@@ -59,5 +59,3 @@ def health_check():
         "authentication": "enabled",
         "database": "connected"
     }
-
-    

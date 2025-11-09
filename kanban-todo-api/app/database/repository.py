@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional, Generic, TypeVar, Type
-from .models import User, Board, 	Task, StatusEnum, PriorityEnum
-from app.core.security import get_password_hash
+from .models import User, Board, Task, StatusEnum, PriorityEnum
+from app.core.security import get_password_hash, verify_password
 
 # Generic types
 ModelType = TypeVar("ModelType")
@@ -35,7 +35,10 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
     
     def delete(self, db: Session, *, id: int) -> ModelType:
-        obj = db.query(self.model).get(id)
+        # Use Session.get which is supported in SQLAlchemy 1.4+/2.x
+        obj = db.get(self.model, id)
+        if obj is None:
+            return None
         db.delete(obj)
         db.commit()
         return obj
